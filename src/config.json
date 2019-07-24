@@ -1,0 +1,105 @@
+{
+    "HostPort" : 8000,
+    "HMAC": "thisisanhmacsecretkey",
+    "DefaultDatabaseID": "DEFAULT",
+    "MailServer" : {
+        "Host": "192.168.1.20",
+        "Port" : 25,
+        "User" : "",
+        "Password" : "",
+        "SenderName": "AppsHub"
+    },
+    "Databases" : [
+        {
+            "ID" : "DEST_MDCI",
+            "ConnectionString" : "sqlserver://admin:fantastic4@192.168.1.195?database=MDCI_MAS500_APP&connection+timeout=0&encrypt=disable",
+            "DriverName" : "mssql",
+            "StorageType": "SERVER",
+            "GroupID": "PICKLISTDEST",
+            "SequenceGenerator" : {
+                "UpsertQuery" : "",
+                "ResultQuery" : "DECLARE @surrogatekey INT; EXEC dbo.spGetNextSurrogateKey '{SequenceName}', @surrogatekey OUTPUT; SELECT @surrogatekey;",
+                "NamePlaceHolder": "{SequenceName}"
+            }
+        },
+        {
+            "ID" : "DEST_VDI",
+            "ConnectionString" : "sqlserver://admin:fantastic4@192.168.1.195?database=VDI_MAS500_APP&connection+timeout=0&encrypt=disable",
+            "DriverName" : "mssql",
+            "StorageType": "SERVER",
+            "GroupID": "PICKLISTDEST",
+            "SequenceGenerator" : {
+                "UpsertQuery" : "",
+                "ResultQuery" : "DECLARE @surrogatekey INT; EXEC dbo.spGetNextSurrogateKey '{SequenceName}', @surrogatekey OUTPUT; SELECT @surrogatekey;",
+                "NamePlaceHolder": "{SequenceName}"
+            }
+        },
+        {
+            "ID" : "DEST_DMS",
+            "ConnectionString" : "sqlserver://admin:fantastic4@192.168.1.195?database=DMS_MAS500_APP&connection+timeout=0&encrypt=disable",
+            "DriverName" : "mssql",
+            "StorageType": "SERVER",
+            "GroupID": "PICKLISTDEST",
+            "SequenceGenerator" : {
+                "UpsertQuery" : "",
+                "ResultQuery" : "DECLARE @surrogatekey INT; EXEC dbo.spGetNextSurrogateKey '{SequenceName}', @surrogatekey OUTPUT; SELECT @surrogatekey;",
+                "NamePlaceHolder": "{SequenceName}"
+            }
+        },     
+        {
+            "ID" : "SOURCE_VDI",
+            "ConnectionString" : "sqlserver://admin.vdi:fantastic4@192.168.1.39?database=VGCMW&connection+timeout=0&encrypt=disable",
+            "DriverName" : "mssql",
+            "StorageType": "SERVER",
+            "GroupID": "PICKLISTSRC",
+            "SequenceGenerator" : {
+                "UpsertQuery" : "DECLARE @surrogatekey INT; EXEC sshGetNextNumber '{SequenceName}', @surrogatekey OUTPUT;",
+                "ResultQuery" : "SELECT @surrogatekey;",
+                "NamePlaceHolder": "{SequenceName}"
+            }
+        },
+        {
+            "ID" : "SOURCE_MDCI",
+            "ConnectionString" : "sqlserver://admin.mdci:fantastic4@192.168.1.39?database=VGCMW&connection+timeout=0&encrypt=disable",
+            "DriverName" : "mssql",
+            "StorageType": "SERVER",
+            "GroupID": "PICKLISTSRC",
+            "SequenceGenerator" : {
+                "UpsertQuery" : "DECLARE @surrogatekey INT; EXEC sshGetNextNumber '{SequenceName}', @surrogatekey OUTPUT;",
+                "ResultQuery" : "SELECT @surrogatekey;",
+                "NamePlaceHolder": "{SequenceName}"
+            }
+        },
+        {
+            "ID" : "SOURCE_DMS",
+            "ConnectionString" : "sqlserver://admin.dms:fantastic4@192.168.1.39?database=VGCMW&connection+timeout=0&encrypt=disable",
+            "DriverName" : "mssql",
+            "StorageType": "SERVER",
+            "GroupID": "PICKLISTSRC",
+            "SequenceGenerator" : {
+                "UpsertQuery" : "DECLARE @surrogatekey INT; EXEC sshGetNextNumber '{SequenceName}', @surrogatekey OUTPUT;",
+                "ResultQuery" : "SELECT @surrogatekey;",
+                "NamePlaceHolder": "{SequenceName}"
+            }
+        }        
+    ],   
+    "Domains": [
+        {
+            "Name":"VDIMDCI",
+            "Host":"192.168.1.24",
+            "Port" : 389,
+            "Path": "DC=VDIMDCI,DC=COM,DC=PH",
+            "AuthorizedUser": "kapitan",
+            "AuthorizedPassword": "D0m@1nAdm1n",
+            "Filter": "(objectClass=person)"
+        }
+    ],
+    "NotifyRecipients": [
+        {
+            "ID":"test",
+            "FullName":"Test User",
+            "EmailAddress":"testuser@yahoo.com",
+            "MessengerName" : "test"
+        }        
+    ]
+}
