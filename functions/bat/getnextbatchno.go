@@ -1,7 +1,7 @@
 package bat
 
 import (
-	_ "src/constants"
+	"gosqljobs/invtcommit/functions/constants"
 
 	du "github.com/eaglebush/datautils"
 )
@@ -30,8 +30,8 @@ func GetNextBatchNo(
 	iCompanyID string,
 	iBatchType int,
 	iUserID string,
-	iModuleNo ModuleConstant,
-	optHiddenBatch int) (Result BatchReturnConstant, BatchKey int, NextBatchNo int) {
+	iModuleNo constants.ModuleConstant,
+	optHiddenBatch int) (Result constants.BatchReturnConstant, BatchKey int, NextBatchNo int) {
 
 	bq.ScopeName("GetNextBatchNo")
 
@@ -47,7 +47,7 @@ func GetNextBatchNo(
 					  FROM tciBatchTypCompany WITH (NOLOCK)
 					  WHERE companyid=? AND batchtype=?;`, iCompanyID, iBatchType)
 		if !qr.HasData {
-			return BatchReturnNoRecord, 0, 0
+			return constants.BatchReturnNoRecord, 0, 0
 		}
 		lNextBatchNo = int(qr.Get(0).ValueInt64Ord(0))
 		lBatchTypeID = qr.Get(0).ValueStringOrd(1)
@@ -67,14 +67,14 @@ func GetNextBatchNo(
 	lNoRecFound := false
 
 	for {
-		valid := BatchReturnError
+		valid := constants.BatchReturnError
 		// Check if batch number exists
 		qr = bq.Get(`SELECT TOP 1 batchno FROM tcibatchlog WITH (nolock) WHERE sourcecompanyid=? AND batchno=? AND batchtype=?;`, iCompanyID, lNextBatchNo, iBatchType)
 		if !qr.HasData || optHiddenBatch != 0 {
 			// If not found, create
 			valid, lBatchKey = CreateBatchLog(bq, iCompanyID, iModuleNo, iBatchType, lBatchTypeID, lNextBatchNo, iUserID, 0)
-			if valid != BatchReturnValid {
-				return BatchReturnError, 0, 0
+			if valid != constants.BatchReturnValid {
+				return constants.BatchReturnError, 0, 0
 			}
 			lNoRecFound = true
 		}
@@ -90,17 +90,17 @@ func GetNextBatchNo(
 				qr = bq.Set(`UPDATE tcibatchtypcompany SET nextbatchno=?
 							 WHERE  companyid=?	AND batchtype=?;`, lNextBatchNo, iCompanyID, iBatchType)
 				if qr.HasData {
-					return BatchReturnValid, lBatchKey, lNextBatchNo
+					return constants.BatchReturnValid, lBatchKey, lNextBatchNo
 				}
 			}
 		}
 
 		if optHiddenBatch != 0 {
-			return BatchReturnValid, lBatchKey, lNextBatchNo
+			return constants.BatchReturnValid, lBatchKey, lNextBatchNo
 		}
 
 		if lStartingNumber == lStartingNumber {
-			return BatchReturnNoNum, lBatchKey, lNextBatchNo
+			return constants.BatchReturnNoNum, lBatchKey, lNextBatchNo
 		}
 	}
 }
