@@ -1,6 +1,7 @@
 package gl
 
 import (
+	"gosqljobs/invtcommit/functions/constants"
 	"time"
 
 	du "github.com/eaglebush/datautils"
@@ -116,11 +117,11 @@ import (
 //        The insert to tglAcctHistCurr (balance sheet accts, beg bal) failed (BB trans).
 //   38 = Failure in spglSetAPIUpdFutBegBalCurrBB.
 //        The update to tglAcctHistCurr (balance sheet accts, beg bal) failed (BB trans).
-func SetAPIGLPosting(bq *du.BatchQuery, iCompanyID string, iBatchKey int, iPostToGL bool) ResultConstant {
+func SetAPIGLPosting(bq *du.BatchQuery, iCompanyID string, iBatchKey int, iPostToGL bool) constants.ResultConstant {
 	bq.ScopeName("SetAPIGLPosting")
 
 	if !iPostToGL {
-		return ResultSuccess
+		return constants.ResultSuccess
 	}
 
 	lSuspenseAcctKey := int64(0)
@@ -135,7 +136,7 @@ func SetAPIGLPosting(bq *du.BatchQuery, iCompanyID string, iBatchKey int, iPostT
 				 FROM tglOptions WITH (NOLOCK) 
 				 WHERE CompanyID=?;`, iCompanyID)
 	if !qr.HasData {
-		return ResultError
+		return constants.ResultError
 	}
 
 	lSuspenseAcctKey = qr.First().ValueInt64("SuspenseAcctKey")
@@ -152,7 +153,7 @@ func SetAPIGLPosting(bq *du.BatchQuery, iCompanyID string, iBatchKey int, iPostT
 				  WHERE a.BatchType = b.BatchType
 					AND b.BatchKey=?;`, iBatchKey)
 	if !qr.HasData {
-		return ResultError
+		return constants.ResultError
 	}
 	lSourceModuleNo = int(qr.First().ValueInt64("ModuleNo"))
 
@@ -161,7 +162,7 @@ func SetAPIGLPosting(bq *du.BatchQuery, iCompanyID string, iBatchKey int, iPostT
 				 FROM tglPosting WITH (NOLOCK)
 				 WHERE BatchKey=?;`, iBatchKey)
 	if !qr.HasData {
-		return ResultSuccess
+		return constants.ResultSuccess
 	}
 
 	// Retrieve Batch PostDate
@@ -172,7 +173,7 @@ func SetAPIGLPosting(bq *du.BatchQuery, iCompanyID string, iBatchKey int, iPostT
 	if qr.HasData {
 		*lBatchPostDate = qr.First().ValueTimeOrd(0)
 		if lBatchPostDate == nil {
-			return ResultFail
+			return constants.ResultFail
 		}
 	}
 

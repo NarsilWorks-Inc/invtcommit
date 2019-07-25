@@ -120,4 +120,5 @@ func DisposableBatchRemover(
 	}
 
 	return constants.ResultSuccess
+
 }

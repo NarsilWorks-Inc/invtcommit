@@ -98,9 +98,9 @@ func LogicalLockCleanup(bq *du.BatchQuery, iLogicalLockType int) constants.Resul
 					case "spglpermanenthiddenbatchrecovery":
 						// no such stored proc
 					case "spsopicklistrecovery":
-						clprocret = so.PickListRecovery(bq, logkey, param2i, param3, param4, param5)
+						clprocret = PickListRecovery(bq, logkey, param2i, param3, param4, param5)
 					case "spsodisposablebatchremover":
-						clprocret = so.DisposableBatchRemover(bq, logkey, param2i, param3, param4, param5)
+						clprocret = DisposableBatchRemover(bq, logkey, param2i, param3, param4, param5)
 					}
 				}
 

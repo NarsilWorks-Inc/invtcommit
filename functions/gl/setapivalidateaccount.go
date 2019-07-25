@@ -1,6 +1,8 @@
 package gl
 
 import (
+	"gosqljobs/invtcommit/functions/constants"
+	"gosqljobs/invtcommit/functions/sm"
 	"time"
 
 	du "github.com/eaglebush/datautils"
@@ -122,7 +124,7 @@ func SetAPIValidateAccount(
 	iVerifyParams bool,
 	iValidateGLAccts bool,
 	iValidateAcctRefs bool,
-	iValidateCurrIDs bool) (Result ResultConstant, Severity int, SessionID int) {
+	iValidateCurrIDs bool) (Result constants.ResultConstant, Severity int, SessionID int) {
 
 	var qr du.QueryResult
 	var lErrMsgNo int
@@ -168,14 +170,14 @@ func SetAPIValidateAccount(
 	if iVerifyParams {
 
 		if iSessionID == 0 {
-			iSessionID = GetNextSurrogateKey(bq, "tciErrorLog")
+			iSessionID = sm.GetNextSurrogateKey(bq, "tciErrorLog")
 			if iSessionID == 0 {
-				return ResultConstant(19), 2, 0
+				return constants.ResultConstant(19), 2, 0
 			}
 		}
 
 		if iUserID == "" {
-			return ResultConstant(33), 2, 0
+			return constants.ResultConstant(33), 2, 0
 		}
 
 		if iUserID != "" {
@@ -185,41 +187,41 @@ func SetAPIValidateAccount(
 			}
 
 			if lLanguageID == 0 {
-				return ResultConstant(34), 2, 0
+				return constants.ResultConstant(34), 2, 0
 			}
 		}
 
 		if iCompanyID == "" {
-			LogError(bq, iBatchKey, 0, 19101, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
-			return ResultConstant(20), 2, 0
+			sm.LogError(bq, iBatchKey, 0, 19101, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
+			return constants.ResultConstant(20), 2, 0
 		}
 
 		// CompanyID must be valid (Get CurrID in the process)
 
 		qr = bq.Get(`SELECT CurrID FROM tsmCompany WITH (NOLOCK) WHERE CompanyID=?;`, iCompanyID)
 		if !qr.HasData {
-			LogError(bq, iBatchKey, 0, 19102, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
-			return ResultConstant(21), 2, 0
+			sm.LogError(bq, iBatchKey, 0, 19102, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
+			return constants.ResultConstant(21), 2, 0
 		}
 
 		// Does the Home Currency Exist?
 		qr = bq.Get(`SELECT IsUsed FROM tmcCurrency WITH (NOLOCK) WHERE CurrID=?;`, iHomeCurrID)
 		if !qr.HasData {
-			LogError(bq, iBatchKey, 0, lInvalidCurr, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
-			return ResultConstant(25), 2, 0
+			sm.LogError(bq, iBatchKey, 0, lInvalidCurr, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
+			return constants.ResultConstant(25), 2, 0
 		}
 		lIsCurrIDUsed = qr.First().ValueInt64Ord(0) == 1
 
 		if !lIsCurrIDUsed {
-			LogError(bq, iBatchKey, 0, lNotUsedCurr, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
-			return ResultConstant(23), 2, 0
+			sm.LogError(bq, iBatchKey, 0, lNotUsedCurr, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
+			return constants.ResultConstant(23), 2, 0
 		}
 
 		// Get the GL Options information. (Just check if this information exists on the company)
 		qr = bq.Get(`SELECT  AutoAcctAdd, UseMultCurr, AcctMask, AcctRefUsage FROM tglOptions WITH (NOLOCK) WHERE CompanyID=?;`, iCompanyID)
 		if !qr.HasData {
-			LogError(bq, iBatchKey, 0, 19105, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
-			return ResultConstant(24), 2, 0
+			sm.LogError(bq, iBatchKey, 0, 19105, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
+			return constants.ResultConstant(24), 2, 0
 		}
 		lAutoAcctAdd = qr.First().ValueInt64Ord(0) == 1
 		lUseMultCurr = qr.First().ValueInt64Ord(1) == 1
@@ -229,8 +231,8 @@ func SetAPIValidateAccount(
 
 	// Validate the GL accounts in #tglValidateAcct now
 	lErrorsOccurred := false
-	lValidateAcctRetVal := ResultError
-	lValidateAcctRefRetVal := ResultError
+	lValidateAcctRetVal := constants.ResultError
+	lValidateAcctRefRetVal := constants.ResultError
 	lValidateAcctRefSeverity := 0
 	lMaxAccountSegments := 0
 	lAcctRefValFail := 0
@@ -267,7 +269,7 @@ func SetAPIValidateAccount(
 
 			lErrorsOccurred = true
 			lValidateAcctRetVal = 10
-			oSeverity = lFatalError
+			oSeverity = constants.FatalError
 
 			bq.Set(`INSERT INTO #tciErrorStg (
 							GLAcctKey,   BatchKey,    ErrorType,   Severity, 
@@ -276,7 +278,7 @@ func SetAPIValidateAccount(
 					SELECT GLAcctKey, ?, ?,	?, GLAcctKey, '',  '', '', '', ?
 					FROM #tglValidateAcct WITH (NOLOCK)
 					WHERE ValidationRetVal = 10
-						AND ErrorMsgNo = ?;`, iBatchKey, lInterfaceError, lFatalError, lMissingAcctKey, lMissingAcctKey)
+						AND ErrorMsgNo = ?;`, iBatchKey, constants.InterfaceError, constants.FatalError, lMissingAcctKey, lMissingAcctKey)
 			goto FinishFunc
 		}
 
@@ -290,7 +292,7 @@ func SetAPIValidateAccount(
 
 			lErrorsOccurred = true
 			lValidateAcctRetVal = 9
-			oSeverity = lFatalError
+			oSeverity = constants.FatalError
 
 			bq.Set(`TRUNCATE TABLE #tglAcctMask;`)
 
@@ -313,7 +315,7 @@ func SetAPIValidateAccount(
 					WHERE a.GLAcctKey = b.GLAcctKey
 						AND b.GLAcctNo = c.GLAcctNo
 						AND a.ValidationRetVal = 9
-						AND a.ErrorMsgNo=?;`, iBatchKey, lInterfaceError, lFatalError, iCompanyID, lInvalidAcctCo, lInvalidAcctCo)
+						AND a.ErrorMsgNo=?;`, iBatchKey, constants.InterfaceError, constants.FatalError, iCompanyID, lInvalidAcctCo, lInvalidAcctCo)
 		}
 
 		/* -------------- Check for Mask Characters in the GL Account Number -------------- */
@@ -328,7 +330,7 @@ func SetAPIValidateAccount(
 
 				lErrorsOccurred = true
 				lValidateAcctRetVal = 4
-				oSeverity = lFatalError
+				oSeverity = constants.FatalError
 
 				bq.Set(`TRUNCATE TABLE #tglAcctMask;`)
 
@@ -349,7 +351,7 @@ func SetAPIValidateAccount(
 						WHERE a.GLAcctKey = b.GLAcctKey
 							AND b.GLAcctNo = c.GLAcctNo
 							AND a.ValidationRetVal = 4
-							AND a.ErrorMsgNo=?;`, iBatchKey, lInterfaceError, lFatalError, lMaskedGLAcct, lMaskedGLAcct)
+							AND a.ErrorMsgNo=?;`, iBatchKey, constants.InterfaceError, constants.FatalError, lMaskedGLAcct, lMaskedGLAcct)
 			}
 		}
 
@@ -365,7 +367,7 @@ func SetAPIValidateAccount(
 
 				lErrorsOccurred = true
 				lValidateAcctRetVal = 12
-				oSeverity = lFatalError
+				oSeverity = constants.FatalError
 
 				bq.Set(`TRUNCATE TABLE #tglAcctMask;`)
 
@@ -386,7 +388,7 @@ func SetAPIValidateAccount(
 						WHERE a.GLAcctKey = b.GLAcctKey
 							AND b.GLAcctNo = c.GLAcctNo
 							AND a.ValidationRetVal = 12
-							AND a.ErrorMsgNo=?;`, iBatchKey, lInterfaceError, lFatalError, lInactiveGLAcct, lInactiveGLAcct)
+							AND a.ErrorMsgNo=?;`, iBatchKey, constants.InterfaceError, constants.FatalError, lInactiveGLAcct, lInactiveGLAcct)
 
 			}
 
@@ -401,7 +403,7 @@ func SetAPIValidateAccount(
 
 				lErrorsOccurred = true
 				lValidateAcctRetVal = 12
-				oSeverity = lFatalError
+				oSeverity = constants.FatalError
 
 				bq.Set(`TRUNCATE TABLE #tglAcctMask;`)
 
@@ -422,7 +424,7 @@ func SetAPIValidateAccount(
 						WHERE a.GLAcctKey = b.GLAcctKey
 							AND b.GLAcctNo = c.GLAcctNo
 							AND a.ValidationRetVal = 12
-							AND a.ErrorMsgNo = ?;`, iBatchKey, lInterfaceError, lFatalError, lDeletedGLAcct, lDeletedGLAcct)
+							AND a.ErrorMsgNo = ?;`, iBatchKey, constants.InterfaceError, constants.FatalError, lDeletedGLAcct, lDeletedGLAcct)
 			}
 		}
 
@@ -460,7 +462,7 @@ func SetAPIValidateAccount(
 
 				lErrorsOccurred = true
 				lValidateAcctRetVal = 17
-				oSeverity = lFatalError
+				oSeverity = constants.FatalError
 
 				bq.Set(`TRUNCATE TABLE #tglAcctMask;`)
 
@@ -481,7 +483,7 @@ func SetAPIValidateAccount(
 						WHERE a.GLAcctKey = b.GLAcctKey
 							AND b.GLAcctNo = c.GLAcctNo
 							AND a.ValidationRetVal = 17
-							AND a.ErrorMsgNo=?;`, iBatchKey, lInterfaceError, lFatalError, iFinGL, iFinGL)
+							AND a.ErrorMsgNo=?;`, iBatchKey, constants.InterfaceError, constants.FatalError, iFinGL, iFinGL)
 			}
 		}
 
@@ -516,7 +518,7 @@ func SetAPIValidateAccount(
 
 				lErrorsOccurred = true
 				lValidateAcctRetVal = 38
-				oSeverity = lFatalError
+				oSeverity = constants.FatalError
 
 				bq.Set(`TRUNCATE TABLE #tglAcctMask;`)
 
@@ -538,7 +540,7 @@ func SetAPIValidateAccount(
 						WHERE a.GLAcctKey = b.GLAcctKey
 							AND b.GLAcctNo = c.GLAcctNo
 							AND a.ValidationRetVal = 38
-							AND a.ErrorMsgNo = ?;`, iBatchKey, lInterfaceError, lFatalError, iPostTF, iPostTF)
+							AND a.ErrorMsgNo = ?;`, iBatchKey, constants.InterfaceError, constants.FatalError, iPostTF, iPostTF)
 			}
 		}
 
@@ -560,7 +562,7 @@ func SetAPIValidateAccount(
 
 				lErrorsOccurred = true
 				lValidateAcctRetVal = 13
-				oSeverity = lFatalError
+				oSeverity = constants.FatalError
 
 				bq.Set(`TRUNCATE TABLE #tglAcctMask;`)
 
@@ -583,7 +585,7 @@ func SetAPIValidateAccount(
 							WHERE a.GLAcctKey = b.GLAcctKey
 							AND b.GLAcctNo = c.GLAcctNo
 							AND a.ValidationRetVal = 13
-							AND a.ErrorMsgNo = ?;`, iBatchKey, lInterfaceError, lFatalError, iEffectiveDate.Format(`2006-01-02`), lConvertToMMDDYYYYDate,
+							AND a.ErrorMsgNo = ?;`, iBatchKey, constants.InterfaceError, constants.FatalError, iEffectiveDate.Format(`2006-01-02`), lConvertToMMDDYYYYDate,
 					lConvertToMMDDYYYYDate, lGLAcctStartDateError, lGLAcctStartDateError)
 
 			}
@@ -602,7 +604,7 @@ func SetAPIValidateAccount(
 
 				lErrorsOccurred = true
 				lValidateAcctRetVal = 13
-				oSeverity = lFatalError
+				oSeverity = constants.FatalError
 
 				bq.Set(`TRUNCATE TABLE #tglAcctMask;`)
 
@@ -625,7 +627,7 @@ func SetAPIValidateAccount(
 						WHERE a.GLAcctKey = b.GLAcctKey
 							AND b.GLAcctNo = c.GLAcctNo
 							AND a.ValidationRetVal = 13
-							AND a.ErrorMsgNo = ?;`, iBatchKey, lInterfaceError, lFatalError, iEffectiveDate.Format(`2006-01-02`), lConvertToMMDDYYYYDate,
+							AND a.ErrorMsgNo = ?;`, iBatchKey, constants.InterfaceError, constants.FatalError, iEffectiveDate.Format(`2006-01-02`), lConvertToMMDDYYYYDate,
 					lConvertToMMDDYYYYDate, lGLAcctEndDateError, lGLAcctEndDateError)
 			}
 		}
@@ -685,7 +687,7 @@ func SetAPIValidateAccount(
 
 					lErrorsOccurred = true
 					lValidateAcctRetVal = 31
-					oSeverity = lFatalError
+					oSeverity = constants.FatalError
 
 					bq.Set(`TRUNCATE TABLE #tglAcctMask;`)
 
@@ -707,7 +709,7 @@ func SetAPIValidateAccount(
 								AND a.AcctRefKey = c.AcctRefKey
 								AND b.GLAcctNo = d.GLAcctNo
 								AND a.ValidationRetVal = 31
-								AND a.ErrorMsgNo = ?;`, iBatchKey, lInterfaceError, lFatalError, lAcctRefSegs, lAcctRefSegs)
+								AND a.ErrorMsgNo = ?;`, iBatchKey, constants.InterfaceError, constants.FatalError, lAcctRefSegs, lAcctRefSegs)
 				}
 			}
 		}
@@ -728,14 +730,14 @@ func SetAPIValidateAccount(
 
 			lErrorsOccurred = true
 			lValidateAcctRetVal = 25
-			oSeverity = lFatalError
+			oSeverity = constants.FatalError
 
 			bq.Set(`INSERT INTO #tciErrorStg (
 						GLAcctKey,   BatchKey,    ErrorType,   Severity, 
 						StringData1, StringData2, StringData3, StringData4, 
 						StringData5, StringNo)
 					SELECT GLAcctKey, ?, ?, ?, CurrID, '', '', '', '', FROM #tglValidateAcct WITH (NOLOCK)
-					WHERE ValidationRetVal = 25 AND ErrorMsgNo = ?;`, iBatchKey, lInterfaceError, lFatalError, lInvalidCurr, lInvalidCurr)
+					WHERE ValidationRetVal = 25 AND ErrorMsgNo = ?;`, iBatchKey, constants.InterfaceError, constants.FatalError, lInvalidCurr, lInvalidCurr)
 
 			goto FinishFunc
 
@@ -751,7 +753,7 @@ func SetAPIValidateAccount(
 
 			lErrorsOccurred = true
 			lValidateAcctRetVal = 23
-			oSeverity = lFatalError
+			oSeverity = constants.FatalError
 
 			bq.Set(`INSERT INTO #tciErrorStg (
 						GLAcctKey,   BatchKey,    ErrorType,   Severity, 
@@ -759,7 +761,7 @@ func SetAPIValidateAccount(
 						StringData5, StringNo)
 					SELECT GLAcctKey, ?, ?, ?, ?, CurrID, '', '', '', '', ?
 					FROM #tglValidateAcct WITH (NOLOCK)
-					WHERE ValidationRetVal = 23 AND ErrorMsgNo=?;`, iBatchKey, lInterfaceError, lFatalError, lNotUsedCurr, lNotUsedCurr)
+					WHERE ValidationRetVal = 23 AND ErrorMsgNo=?;`, iBatchKey, constants.InterfaceError, constants.FatalError, lNotUsedCurr, lNotUsedCurr)
 		}
 
 		//Make sure CurrID's are Home Currency IF Multicurrency is NOT used.
@@ -774,7 +776,7 @@ func SetAPIValidateAccount(
 
 				lErrorsOccurred = true
 				lValidateAcctRetVal = 26
-				oSeverity = lFatalError
+				oSeverity = constants.FatalError
 
 				bq.Set(`INSERT #tciErrorStg (
 							GLAcctKey,   BatchKey,    ErrorType,   Severity, 
@@ -782,7 +784,7 @@ func SetAPIValidateAccount(
 							StringData5, StringNo)
 						SELECT GLAcctKey, ?, ?, ?, ?, '', '', '', '', ?
 						FROM #tglValidateAcct WITH (NOLOCK)
-						WHERE ValidationRetVal = 26 AND ErrorMsgNo = ?;`, iBatchKey, lInterfaceError, lFatalError, iCompanyID, lMultCurrError, lMultCurrError)
+						WHERE ValidationRetVal = 26 AND ErrorMsgNo = ?;`, iBatchKey, constants.InterfaceError, constants.FatalError, iCompanyID, lMultCurrError, lMultCurrError)
 
 			}
 
@@ -811,8 +813,8 @@ func SetAPIValidateAccount(
 
 				lErrorsOccurred = true
 				lValidateAcctRetVal = 14
-				if oSeverity != lFatalError {
-					oSeverity = lWarning
+				if oSeverity != constants.FatalError {
+					oSeverity = constants.Warning
 				}
 
 				bq.Set(`TRUNCATE TABLE #tglAcctMask;`)
@@ -833,7 +835,7 @@ func SetAPIValidateAccount(
 						WHERE a.GLAcctKey = b.GLAcctKey
 							AND b.GLAcctNo = c.GLAcctNo
 							AND a.ValidationRetVal = 15
-							AND a.ErrorMsgNo=?;`, iBatchKey, lInterfaceError, lWarning, lCurrIsHomeCurr, lCurrIsHomeCurr)
+							AND a.ErrorMsgNo=?;`, iBatchKey, constants.InterfaceError, constants.Warning, lCurrIsHomeCurr, lCurrIsHomeCurr)
 			}
 
 			// Specific Foreign Currency Restriction #1 (Check Financial Accounts Only)
@@ -854,8 +856,8 @@ func SetAPIValidateAccount(
 
 				lErrorsOccurred = true
 				lValidateAcctRetVal = 15
-				if oSeverity != lFatalError {
-					oSeverity = lWarning
+				if oSeverity != constants.FatalError {
+					oSeverity = constants.Warning
 				}
 
 				bq.Set(`TRUNCATE TABLE #tglAcctMask;`)
@@ -877,7 +879,7 @@ func SetAPIValidateAccount(
 						WHERE a.GLAcctKey = b.GLAcctKey
 							AND b.GLAcctNo = c.GLAcctNo
 							AND a.ValidationRetVal = 15
-							AND a.ErrorMsgNo=?;`, iBatchKey, lInterfaceError, lWarning, lCurrIsHomeCurr, lCurrIsHomeCurr)
+							AND a.ErrorMsgNo=?;`, iBatchKey, constants.InterfaceError, constants.Warning, lCurrIsHomeCurr, lCurrIsHomeCurr)
 			}
 
 			// Specific Foreign Currency Restriction #2 (Check Financial Accounts Only)
@@ -900,7 +902,7 @@ func SetAPIValidateAccount(
 
 				lErrorsOccurred = true
 				lValidateAcctRetVal = 16
-				oSeverity = lFatalError
+				oSeverity = constants.FatalError
 
 				bq.Set(`TRUNCATE TABLE #tglAcctMask;`)
 
@@ -945,10 +947,10 @@ FinishFunc:
 				FROM #tciErrorStg tmp
 					JOIN #tglPosting gl ON tmp.GLAcctKey = gl.GLAcctKey`)
 
-		LogErrors(bq, iBatchKey, iSessionID)
+		sm.LogErrors(bq, iBatchKey, iSessionID)
 
 		if lValidateAcctRetVal == 0 {
-			lValidateAcctRetVal = ResultSuccess
+			lValidateAcctRetVal = constants.ResultSuccess
 		} else {
 			if lAcctRefValFail == 1 {
 				lValidateAcctRetVal = lValidateAcctRefRetVal

@@ -284,9 +284,11 @@ const (
 )
 
 // various constants
-const lInterfaceError int = 3
-const lFatalError int = 2
-const lWarning int = 1
+const (
+	InterfaceError int = 3
+	FatalError     int = 2
+	Warning        int = 1
+)
 
 // ======================================================================== PURCHASE ORDER ===================================================================== //
 

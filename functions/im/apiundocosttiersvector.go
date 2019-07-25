@@ -32,7 +32,7 @@ func APIUndoCostTiersVector(bq *du.BatchQuery) constants.ResultConstant {
 		return constants.ResultError
 	}
 
-	qr = bq.Set(`IF Object_id('tempdb..#timUndoCostTierWrk1') IS NOT NULL
+	qr = bq.Set(`IF OBJECT_ID('tempdb..#timUndoCostTierWrk1') IS NOT NULL
 					TRUNCATE TABLE #timUndoCostTierWrk1
 				ELSE
 					BEGIN

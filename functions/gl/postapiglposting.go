@@ -1,8 +1,7 @@
-package im
+package gl
 
 import (
 	"gosqljobs/invtcommit/functions/constants"
-	"gosqljobs/invtcommit/functions/gl"
 
 	du "github.com/eaglebush/datautils"
 )
@@ -18,7 +17,7 @@ func PostAPIGLPosting(bq *du.BatchQuery, iBatchKey int, iCompanyID string, iModu
 		return constants.ResultSuccess
 	}
 
-	res := gl.SetAPIGLPosting(bq, iCompanyID, iBatchKey, iIntegrateWithGL)
+	res := SetAPIGLPosting(bq, iCompanyID, iBatchKey, iIntegrateWithGL)
 	if res != constants.ResultSuccess {
 		return constants.ResultError
 	}

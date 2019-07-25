@@ -1,6 +1,8 @@
 package gl
 
 import (
+	"gosqljobs/invtcommit/functions/constants"
+	"gosqljobs/invtcommit/functions/sm"
 	"time"
 
 	du "github.com/eaglebush/datautils"
@@ -74,7 +76,7 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 	iLanguageID int,
 	iAcctRefUsage int,
 	iEffectiveDate *time.Time,
-	iVerifyParams bool) (Result ResultConstant, Severity int, SessionID int) {
+	iVerifyParams bool) (Result constants.ResultConstant, Severity int, SessionID int) {
 
 	var qr du.QueryResult
 
@@ -88,9 +90,9 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 	if iVerifyParams {
 
 		if iSessionID == 0 {
-			iSessionID = GetNextSurrogateKey(bq, "tciErrorLog")
+			iSessionID = sm.GetNextSurrogateKey(bq, "tciErrorLog")
 			if iSessionID == 0 {
-				return ResultConstant(19), 2, 0
+				return constants.ResultConstant(19), 2, 0
 			}
 		}
 
@@ -101,38 +103,38 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 			}
 
 			if lLanguageID == 0 {
-				return ResultConstant(34), 2, 0
+				return constants.ResultConstant(34), 2, 0
 			}
 		}
 
 		if iCompanyID == "" {
-			LogError(bq, iBatchKey, 0, 19101, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
-			return ResultConstant(20), 2, 0
+			sm.LogError(bq, iBatchKey, 0, 19101, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
+			return constants.ResultConstant(20), 2, 0
 		}
 
 		// CompanyID must be valid (Get CurrID in the process)
 		qr = bq.Get(`SELECT CompanyName FROM tsmCompany WITH (NOLOCK) WHERE CompanyID=?;`, iCompanyID)
 		if !qr.HasData {
-			LogError(bq, iBatchKey, 0, 19102, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
-			return ResultConstant(21), 2, 0
+			sm.LogError(bq, iBatchKey, 0, 19102, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
+			return constants.ResultConstant(21), 2, 0
 		}
 
 		// Get the GL Options information. (Just check if this information exists on the company)
 		qr = bq.Get(`SELECT AcctRefUsage FROM tglOptions WITH (NOLOCK) WHERE CompanyID=?;`, iCompanyID)
 		if !qr.HasData {
-			LogError(bq, iBatchKey, 0, 19105, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
-			return ResultConstant(24), 2, 0
+			sm.LogError(bq, iBatchKey, 0, 19105, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
+			return constants.ResultConstant(24), 2, 0
 		}
 		lAcctRefUsage = int(qr.First().ValueInt64Ord(0))
 
 		if lAcctRefUsage == 0 {
-			LogError(bq, iBatchKey, 0, 19230, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
-			return ResultConstant(42), 2, 0
+			sm.LogError(bq, iBatchKey, 0, 19230, iCompanyID, ``, ``, ``, ``, 3, 2, iSessionID, 0, 0, 0, 0)
+			return constants.ResultConstant(42), 2, 0
 		}
 	}
 
 	lErrorsOccurred := false
-	lValidateAcctRetVal := ResultError
+	lValidateAcctRetVal := constants.ResultError
 	oSeverity := 0
 
 	const lAcctRefKeyReqd int = 19235
@@ -160,7 +162,7 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 
 			lErrorsOccurred = true
 			lValidateAcctRetVal = 43
-			oSeverity = lFatalError
+			oSeverity = constants.FatalError
 
 			bq.Set(`TRUNCATE TABLE #tglAcctMask;`)
 
@@ -180,7 +182,7 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 					SELECT GLAcctKey, ?, ?, ?, CONVERT(VARCHAR(30), AcctRefKey), '', '', '', '', ?
 					FROM #tglValidateAcct WITH (NOLOCK)
 					WHERE ValidationRetVal = 30
-						AND ErrorMsgNo=?;`, iBatchKey, lInterfaceError, lFatalError, lAcctRefExist, lAcctRefExist)
+						AND ErrorMsgNo=?;`, iBatchKey, constants.InterfaceError, constants.FatalError, lAcctRefExist, lAcctRefExist)
 		}
 	}
 
@@ -198,7 +200,7 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 
 			lErrorsOccurred = true
 			lValidateAcctRetVal = 30
-			oSeverity = lFatalError
+			oSeverity = constants.FatalError
 
 			bq.Set(`INSERT INTO #tciErrorStg (
 						GLAcctKey,   BatchKey,    ErrorType,   Severity, 
@@ -207,7 +209,7 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 					SELECT GLAcctKey, ?, ?, ?, CONVERT(VARCHAR(30), AcctRefKey), '', '', '', '', ?
 					FROM #tglValidateAcct WITH (NOLOCK)
 					WHERE ValidationRetVal = 30
-						AND ErrorMsgNo = ?;`, iBatchKey, lInterfaceError, lFatalError, lAcctRefExist, lAcctRefExist)
+						AND ErrorMsgNo = ?;`, iBatchKey, constants.InterfaceError, constants.FatalError, lAcctRefExist, lAcctRefExist)
 
 			goto FinishFunc
 		}
@@ -225,7 +227,7 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 
 			lErrorsOccurred = true
 			lValidateAcctRetVal = 27
-			oSeverity = lFatalError
+			oSeverity = constants.FatalError
 
 			bq.Set(`INSERT INTO #tciErrorStg (
 						GLAcctKey,   BatchKey,    ErrorType,   Severity, 
@@ -235,7 +237,7 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 					FROM #tglValidateAcct a WITH (NOLOCK), tglAcctRef b WITH (NOLOCK)
 					WHERE a.AcctRefKey = b.AcctRefKey
 						AND a.ValidationRetVal = 27
-						AND a.ErrorMsgNo = ?;`, iBatchKey, lInterfaceError, lFatalError, iCompanyID, lAcctRefCo, lAcctRefCo)
+						AND a.ErrorMsgNo = ?;`, iBatchKey, constants.InterfaceError, constants.FatalError, iCompanyID, lAcctRefCo, lAcctRefCo)
 		}
 	}
 
@@ -254,7 +256,7 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 
 			lErrorsOccurred = true
 			lValidateAcctRetVal = 37
-			oSeverity = lFatalError
+			oSeverity = constants.FatalError
 
 			bq.Set(`INSERT INTO #tciErrorStg (
 						GLAcctKey,   BatchKey,    ErrorType,   Severity, 
@@ -264,7 +266,7 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 					FROM #tglValidateAcct a WITH (NOLOCK), tglAcctRef b WITH (NOLOCK)
 					WHERE a.AcctRefKey = b.AcctRefKey
 						AND a.ValidationRetVal = 37
-						AND a.ErrorMsgNo = ?;`, iBatchKey, lInterfaceError, lFatalError, lAcctRefInactive, lAcctRefInactive)
+						AND a.ErrorMsgNo = ?;`, iBatchKey, constants.InterfaceError, constants.FatalError, lAcctRefInactive, lAcctRefInactive)
 		}
 
 		// Reference Code Effective Date Restrictions
@@ -282,7 +284,7 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 
 				lErrorsOccurred = true
 				lValidateAcctRetVal = 32
-				oSeverity = lFatalError
+				oSeverity = constants.FatalError
 
 				bq.Set(`INSERT INTO #tciErrorStg (
 							GLAcctKey,   BatchKey,    ErrorType,   Severity, 
@@ -292,7 +294,7 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 						FROM #tglValidateAcct a WITH (NOLOCK), tglAcctRef b WITH (NOLOCK)
 						WHERE a.AcctRefKey = b.AcctRefKey
 							AND a.ValidationRetVal = 32
-							AND a.ErrorMsgNo = ?;`, iBatchKey, lInterfaceError, lFatalError, iEffectiveDate.Format(`2006-01-02`), lAcctRefStart)
+							AND a.ErrorMsgNo = ?;`, iBatchKey, constants.InterfaceError, constants.FatalError, iEffectiveDate.Format(`2006-01-02`), lAcctRefStart)
 
 			}
 
@@ -310,7 +312,7 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 			if qr.HasAffectedRows {
 				lErrorsOccurred = true
 				lValidateAcctRetVal = 32
-				oSeverity = lFatalError
+				oSeverity = constants.FatalError
 
 				bq.Set(`INSERT INTO #tciErrorStg (
 							GLAcctKey,   BatchKey,    ErrorType,   Severity, 
@@ -320,7 +322,7 @@ func SetAPIValidateAcctRef(bq *du.BatchQuery,
 						FROM #tglValidateAcct a WITH (NOLOCK), tglAcctRef b WITH (NOLOCK)
 						WHERE a.AcctRefKey = b.AcctRefKey
 							AND a.ValidationRetVal = 32
-							AND a.ErrorMsgNo = ?;`, iBatchKey, lInterfaceError, lFatalError, iEffectiveDate.Format(`2006-01-02`), lAcctRefEnd, lAcctRefEnd)
+							AND a.ErrorMsgNo = ?;`, iBatchKey, constants.InterfaceError, constants.FatalError, iEffectiveDate.Format(`2006-01-02`), lAcctRefEnd, lAcctRefEnd)
 			}
 		}
 	}
@@ -342,11 +344,11 @@ FinishFunc:
 				FROM #tciErrorStg tmp
 					JOIN #tglPosting gl ON tmp.GLAcctKey = gl.GLAcctKey;`)
 
-		LogErrors(bq, iBatchKey, iSessionID)
+		sm.LogErrors(bq, iBatchKey, iSessionID)
 	}
 
 	if lValidateAcctRetVal == 0 {
-		lValidateAcctRetVal = ResultSuccess
+		lValidateAcctRetVal = constants.ResultSuccess
 	}
 
 	return lValidateAcctRetVal, oSeverity, iSessionID

@@ -1,6 +1,10 @@
 package gl
 
-import du "github.com/eaglebush/datautils"
+import (
+	"gosqljobs/invtcommit/functions/constants"
+
+	du "github.com/eaglebush/datautils"
+)
 
 // SummarizeBatchlessTglPosting - This SP designed to take a list of transaction keys and identify its corresponding
 //                   GL posting records (tglPosting).  It will then look at the GL summarize options of
@@ -29,7 +33,7 @@ import du "github.com/eaglebush/datautils"
 //
 //     0 - Unexpected Error (SP Failure)
 //     1 - Successful
-func SummarizeBatchlessTglPosting(bq *du.BatchQuery, iCompanyID string, iBatchKey int, optUseTempTable bool) ResultConstant {
+func SummarizeBatchlessTglPosting(bq *du.BatchQuery, iCompanyID string, iBatchKey int, optUseTempTable bool) constants.ResultConstant {
 
 	var qr du.QueryResult
 
@@ -39,7 +43,7 @@ func SummarizeBatchlessTglPosting(bq *du.BatchQuery, iCompanyID string, iBatchKe
 
 	qr = bq.Get(`SELECT ISNULL(OBJECT_ID('tempdb..#tglPostingDetlTran'),0);`)
 	if qr.First().ValueFloat64Ord(0) == 0 {
-		return ResultError
+		return constants.ResultError
 	}
 
 	ttbl := "tglPosting"
@@ -49,7 +53,7 @@ func SummarizeBatchlessTglPosting(bq *du.BatchQuery, iCompanyID string, iBatchKe
 	qr = bq.Get(`SELECT 1 FROM #tglPostingDetlTran tmp JOIN ` + ttbl + ` gl ON tmp.TranType = gl.TranType AND tmp.PostingDetlTranKey = gl.TranKey;`)
 	if !qr.HasData {
 		// Nothing to do.
-		return ResultSuccess
+		return constants.ResultSuccess
 	}
 
 	lPostInDetlInventory := 0
@@ -69,7 +73,7 @@ func SummarizeBatchlessTglPosting(bq *du.BatchQuery, iCompanyID string, iBatchKe
 
 	if lPostInDetlInventory == 1 && lPostInDetlSalesClearing == 1 {
 		// Nothing to summarize.
-		return ResultSuccess
+		return constants.ResultSuccess
 	}
 
 	// Identify the GL posting records we are dealing with and store them off in a work table.
@@ -176,7 +180,7 @@ func SummarizeBatchlessTglPosting(bq *du.BatchQuery, iCompanyID string, iBatchKe
 	// See if there is anything to do.
 	qr = bq.Get(`SELECT 1 FROM #tglPostingTmp`)
 	if !qr.HasData {
-		return ResultError
+		return constants.ResultError
 	}
 
 	bq.Set(`DELETE ` + ttbl + ` FROM tglPosting gl
@@ -197,8 +201,8 @@ func SummarizeBatchlessTglPosting(bq *du.BatchQuery, iCompanyID string, iBatchKe
 			 FROM #tglPostingTmp`)
 
 	if !bq.OK() {
-		return ResultError
+		return constants.ResultError
 	}
 
-	return ResultSuccess
+	return constants.ResultSuccess
 }

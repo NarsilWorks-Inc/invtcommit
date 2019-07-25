@@ -2,7 +2,6 @@ package gl
 
 import (
 	"gosqljobs/invtcommit/functions/constants"
-	"gosqljobs/invtcommit/functions/im"
 	"gosqljobs/invtcommit/functions/sm"
 
 	du "github.com/eaglebush/datautils"
@@ -428,6 +427,7 @@ func APIPostBatchlessGLPosting(
 						HAVING Sum(tmp.PostAmtHC) <> 0) BatchTot ON t1.GLBatchKey = BatchTot.GLBatchKey
 				AND t1.TranKey = BatchTot.TranKey;`,
 		constants.GLPostStatusDebitCreditNotEqual, constants.GLPostStatusDefault, constants.GLPostStatusInvalid)
+
 	if qr.HasAffectedRows {
 		// -- Transaction {0}: Debits and Credits do not equal.
 		bq.Set(`INSERT INTO #tciError (EntryNo,BatchKey,StringNo,StringData1,StringData2,ErrorType,Severity,TranType,TranKey)
@@ -565,7 +565,7 @@ func APIPostBatchlessGLPosting(
 					2, ?, tmp.TranType,
 					tmp.TranKey
 				FROM #tciTransToPostDetl tmp
-				WHERE tmp.PostStatus = ?`, lWarning, constants.GLPostStatusInvalid)
+				WHERE tmp.PostStatus = ?`, constants.Warning, constants.GLPostStatusInvalid)
 
 		lInvalidAcctExist = true
 
@@ -642,7 +642,7 @@ func APIPostBatchlessGLPosting(
 		// -- GL Posting
 		// -- ------------------------
 		if optPostToGL {
-			im.PostAPIGLPosting(bq, lGLBatchKey, lCompanyID, lModuleNo, lIntegrateWithGL)
+			PostAPIGLPosting(bq, lGLBatchKey, lCompanyID, lModuleNo, lIntegrateWithGL)
 		}
 	}
 

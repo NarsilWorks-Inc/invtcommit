@@ -1,6 +1,11 @@
 package gl
 
-import du "github.com/eaglebush/datautils"
+import (
+	"gosqljobs/invtcommit/functions/bat"
+	"gosqljobs/invtcommit/functions/constants"
+
+	du "github.com/eaglebush/datautils"
+)
 
 // CreateBatchlessGLPostingBatch - This SP creates disposable batches for those transactions that are in a temp table called
 //                  #tciTransToPost.  At the end of the routine, the GLBatchKey field will have a new
@@ -23,7 +28,7 @@ import du "github.com/eaglebush/datautils"
 //
 //    0 - Unexpected Error (SP Failure)
 //    1 - Successful
-func CreateBatchlessGLPostingBatch(bq *du.BatchQuery, loginID string, iBatchCmnt string) ResultConstant {
+func CreateBatchlessGLPostingBatch(bq *du.BatchQuery, loginID string, iBatchCmnt string) constants.ResultConstant {
 	bq.ScopeName("CreateBatchlessGLPostingBatch")
 
 	qr := bq.Get(`SELECT DISTINCT 
@@ -38,16 +43,16 @@ func CreateBatchlessGLPostingBatch(bq *du.BatchQuery, loginID string, iBatchCmnt
 				WHERE COALESCE(tmp.GLBatchKey, 0) = 0 
 					AND tmp.PostStatus=0 -- Default status.  Means it is a new transaction.
 					AND tmp.TranType IN (?,?,?);`,
-		SOTranTypeCustShip, SOTranTypeTransShip, SOTranTypeCustRtrn)
+		constants.SOTranTypeCustShip, constants.SOTranTypeTransShip, constants.SOTranTypeCustRtrn)
 	if qr.HasData {
 		for _, v := range qr.Data {
 			cid := v.ValueString("CompanyID")
-			mod := ModuleConstant(v.ValueInt64("ModuleNo"))
+			mod := constants.ModuleConstant(v.ValueInt64("ModuleNo"))
 			bt := int(v.ValueInt64("BatchType"))
 			pdt := v.ValueTime("PostDate")
 			idt := v.ValueTime("InvcDate")
 
-			res, batchKey, _ := GetNextBatch(bq, cid, mod, bt, loginID, iBatchCmnt, pdt, 0, &idt)
+			res, batchKey, _ := bat.GetNextBatch(bq, cid, mod, bt, loginID, iBatchCmnt, pdt, 0, &idt)
 
 			bq.Set(`UPDATE tmp
 					SET tmp.GLBatchKey=?
@@ -64,8 +69,8 @@ func CreateBatchlessGLPostingBatch(bq *du.BatchQuery, loginID string, iBatchCmnt
 	}
 
 	if !bq.OK() {
-		return ResultError
+		return constants.ResultError
 	}
 
-	return ResultSuccess
+	return constants.ResultSuccess
 }
