@@ -7,7 +7,13 @@ import (
 )
 
 // PostAPIGLPosting - post api GL posting
-func PostAPIGLPosting(bq *du.BatchQuery, iBatchKey int, iCompanyID string, iModuleNo int, iIntegrateWithGL bool) constants.ResultConstant {
+func PostAPIGLPosting(
+	bq *du.BatchQuery,
+	iBatchKey int,
+	iCompanyID string,
+	iModuleNo int,
+	iIntegrateWithGL bool) constants.ResultConstant {
+
 	bq.ScopeName("PostAPIGLPosting")
 
 	qr := bq.Get(`SELECT COUNT(*) FROM tglPosting WITH (NOLOCK) WHERE BatchKey=?;`, iBatchKey)

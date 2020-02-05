@@ -117,7 +117,13 @@ import (
 //        The insert to tglAcctHistCurr (balance sheet accts, beg bal) failed (BB trans).
 //   38 = Failure in spglSetAPIUpdFutBegBalCurrBB.
 //        The update to tglAcctHistCurr (balance sheet accts, beg bal) failed (BB trans).
-func SetAPIGLPosting(bq *du.BatchQuery, iCompanyID string, iBatchKey int, iPostToGL bool) constants.ResultConstant {
+func SetAPIGLPosting(
+	bq *du.BatchQuery,
+	iCompanyID string,
+	iBatchKey int,
+	iPostToGL bool,
+	iUserID string) constants.ResultConstant {
+
 	bq.ScopeName("SetAPIGLPosting")
 
 	if !iPostToGL {
@@ -197,5 +203,29 @@ func SetAPIGLPosting(bq *du.BatchQuery, iCompanyID string, iBatchKey int, iPostT
 
 	// Retrieve Fiscal Year Info
 	lFiscYear := ``
+	oRetval, oStatus, oFiscYear, oFiscPer, oStartDate, oEndDate := GetFiscalYearPeriod(bq, iCompanyID, *lBatchPostDate, 3, lFiscYear, iUserID)
 
+	if oRetval == 5 {
+		return constants.ResultFail
+	}
+
+	if oStatus == 2 {
+		return constants.ResultConstant(3)
+	}
+
+	// Post the Transaction
+
+	lRowCount := 0
+
+	// Determine how many non-beginning balance rows in tglPosting will go to tglTransaction.
+	qr = bq.Get(`SELECT COUNT(1) FROM tglPosting WITH (NOLOCK) WHERE BatchKey = ? AND NatCurrBegBal = 0;`, iBatchKey)
+	if qr.HasData {
+		lRowCount = int(qr.First().ValueInt64Ord(0))
+	}
+
+	if lRowCount == 0 {
+		return constants.ResultSuccess
+	}
+
+	
 }

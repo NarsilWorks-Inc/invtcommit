@@ -172,10 +172,10 @@ AS
 
 /* Abort if no post to GL ************************************* */
    IF @iPostToGL = 0
-      BEGIN
+   BEGIN
       SELECT @lGLPostingRetVal = 1
       GOTO FinishProc
-      END
+   END
 
 /* Initialize ************************************************ */
    SELECT @lGLPostingRetVal = 0,
@@ -187,14 +187,14 @@ AS
           @lClearNonFin = ClearNonFin,
           @lUseMultCurr = UseMultCurr,
           @lAcctRefUsage = AcctRefUsage
-      FROM tglOptions WITH (NOLOCK)
-      WHERE CompanyID = @iCompanyID
+   FROM tglOptions WITH (NOLOCK)
+   WHERE CompanyID = @iCompanyID
 
    IF @@ROWCOUNT = 0
-      BEGIN
+   BEGIN
       SELECT @oRetVal = 0
       RETURN
-      END
+   END
 
 /* Retrieve Batch Info ********************************** */
    SELECT @iBatchKey = b.BatchKey,
@@ -205,10 +205,10 @@ AS
       AND b.BatchKey = @iBatchKey
 
    IF @@ROWCOUNT = 0
-      BEGIN
+   BEGIN
       SELECT @oRetVal = 0
       RETURN
-      END
+   END
 
 /* Check to see if there are any rows in tglPosting ********* */
    SELECT @lDummyBatchKey = BatchKey
@@ -217,10 +217,10 @@ AS
 
 /* Treat this situation like a success and exit the sp. */
    IF @@ROWCOUNT = 0
-      BEGIN
+   BEGIN
       SELECT @oRetVal = 1
       RETURN
-      END
+   END
 
 /* Retrieve Batch PostDate ********************************** */
 /* This query cannot be combined with the one above because of the MIN() */
@@ -229,10 +229,10 @@ AS
       WHERE BatchKey = @iBatchKey
 
    IF @lBatchPostDate IS NULL
-      BEGIN
+   BEGIN
       SELECT @oRetVal = 0
       RETURN
-      END
+   END
 
 /* Determine if there are any tglPosting rows with NULL Post Dates. */
    SELECT @lNullPostDateRows = 0
@@ -242,15 +242,15 @@ AS
       AND COALESCE(DATALENGTH(LTRIM(RTRIM(PostDate))),0) = 0
 
    IF @lNullPostDateRows > 0
-      BEGIN
-         /* Yes, there ARE some tglPosting rows with NULL Post Dates, so fix them. */
+   BEGIN
+      /* Yes, there ARE some tglPosting rows with NULL Post Dates, so fix them. */
 
-         UPDATE tglPosting
-            SET PostDate = @lBatchPostDate
-            WHERE BatchKey = @iBatchKey
-            AND COALESCE(DATALENGTH(LTRIM(RTRIM(PostDate))),0) = 0
+      UPDATE tglPosting
+      SET PostDate = @lBatchPostDate
+      WHERE BatchKey = @iBatchKey
+         AND COALESCE(DATALENGTH(LTRIM(RTRIM(PostDate))),0) = 0
 
-      END /* End @lNullPostDateRows > 0 */
+   END /* End @lNullPostDateRows > 0 */
 
 /* Retrieve Fiscal Year Info ********************************** */
    SELECT @lFiscYear = ''
@@ -265,34 +265,34 @@ AS
                                    @lFiscalYearPeriodRetVal OUTPUT
  
    IF @lFiscalYearPeriodRetVal = 5
-      BEGIN
+   BEGIN
       SELECT @lGLPostingRetVal = 2
       GOTO FinishProc
-      END
+   END
 
    IF @lFiscYearPeriodStatus = 2
-      BEGIN
+   BEGIN
       SELECT @lGLPostingRetVal = 3
       GOTO FinishProc
-      END
+   END
 
 /* Post the Transaction  ************************************* */
 
 /* Determine how many non-beginning balance rows in tglPosting will go to tglTransaction. */
    SELECT @lRowCount = COUNT(1)
-      FROM tglPosting WITH (NOLOCK)
-      WHERE BatchKey = @iBatchKey
+   FROM tglPosting WITH (NOLOCK)
+   WHERE BatchKey = @iBatchKey
       AND NatCurrBegBal = 0
    
    IF @@ERROR <> 0 
-      BEGIN
+   BEGIN
       SELECT @lGLPostingRetVal = 0
       GOTO FinishProc
-      END
+   END
    
 /* Do we have any non-beginning balance rows in tglPosting for this batch? */
    IF @lRowCount > 0
-      BEGIN
+   BEGIN
 
 /* Insert the rows from tglPosting into #tglTransaction, then into tglTransaction. */
       EXECUTE spglSetAPIInsertGLTrans @iBatchKey,
@@ -306,16 +306,16 @@ AS
 
 /* Did any standard / transaction GL entries get inserted into tglTransaction? */
       IF @lInsertGLTransRetVal = 0
-         BEGIN
+      BEGIN
          SELECT @oRetVal = 0
          RETURN
-         END
+      END
 
       IF @lInsertGLTransRetVal <> 1
-         BEGIN
+      BEGIN
          SELECT @lGLPostingRetVal = @lInsertGLTransRetVal
          GOTO FinishProc
-         END
+      END
 
 /* Update debit and credit amounts in tglAcctHist. */
       EXECUTE spglSetAPIUpdAcctHist @iCompanyID,
@@ -325,16 +325,16 @@ AS
                                     @lUpdAcctHistRetVal OUTPUT
 
       IF @lUpdAcctHistRetVal = 0
-         BEGIN
+      BEGIN
          SELECT @oRetVal = 0
          RETURN
-         END
+      END
 
       IF @lUpdAcctHistRetVal <> 1
-         BEGIN
+      BEGIN
          SELECT @lGLPostingRetVal = @lUpdAcctHistRetVal
          GOTO FinishProc
-         END
+      END
 
 /* Update beginning balances in future years in tglAcctHist. */
       EXECUTE spglSetAPIUpdFutBegBal @iCompanyID,
@@ -345,20 +345,20 @@ AS
                                      @lUpdFutBegBalRetVal OUTPUT
 
       IF @lUpdFutBegBalRetVal = 0
-         BEGIN
+      BEGIN
          SELECT @oRetVal = 0
          RETURN
-         END
+      END
 
       IF @lUpdFutBegBalRetVal <> 1
-         BEGIN
+      BEGIN
          SELECT @lGLPostingRetVal = @lUpdFutBegBalRetVal
          GOTO FinishProc
-         END
+      END
 
 /* Determine Multicurrency Use */
       IF @lUseMultCurr = 1
-         BEGIN
+      BEGIN
 
 /* Update debit and credit amounts in tglAcctHistCurr. */
          EXECUTE spglSetAPIUpdAcctHistCurr @iCompanyID,
@@ -368,16 +368,16 @@ AS
                                            @lUpdAcctHistCurrRetVal OUTPUT
 
          IF @lUpdAcctHistCurrRetVal = 0
-            BEGIN
+         BEGIN
             SELECT @oRetVal = 0
             RETURN
-            END
+         END
 
          IF @lUpdAcctHistCurrRetVal <> 1
-            BEGIN
+         BEGIN
             SELECT @lGLPostingRetVal = @lUpdAcctHistCurrRetVal
             GOTO FinishProc
-            END
+         END
 
 /* Update beginning balances in future years in tglAcctHistCurr. */
          EXECUTE spglSetAPIUpdFutBegBalCurr @iCompanyID,
@@ -387,23 +387,22 @@ AS
                                             @lUpdFutBegBalCurrRetVal OUTPUT
 
          IF @lUpdFutBegBalCurrRetVal = 0
-            BEGIN
+         BEGIN
             SELECT @oRetVal = 0
             RETURN
-            END
+         END
 
          IF @lUpdFutBegBalCurrRetVal <> 1
-            BEGIN
+         BEGIN
             SELECT @lGLPostingRetVal = @lUpdFutBegBalCurrRetVal
             GOTO FinishProc
-            END
+         END
 
-         END /* End @lUseMultCurr = 1 [This Company DOES use Multicurrency.] */
+      END /* End @lUseMultCurr = 1 [This Company DOES use Multicurrency.] */
 
 /* Determine Account Reference Code Usage */
-      IF (@lAcctRefUsage = 1
-      OR @lAcctRefUsage = 2)
-         BEGIN
+      IF (@lAcctRefUsage = 1 OR @lAcctRefUsage = 2)
+      BEGIN
 
 /* Update debit and credit amounts in tglAcctHistAcctRef. */
          EXECUTE spglSetAPIUpdAcctHistRef @iCompanyID,
@@ -413,36 +412,36 @@ AS
                                           @lUpdAcctHistRefRetVal OUTPUT
 
          IF @lUpdAcctHistRefRetVal = 0
-            BEGIN
+         BEGIN
             SELECT @oRetVal = 0
             RETURN
-            END
+         END
 
          IF @lUpdAcctHistRefRetVal <> 1
-            BEGIN
+         BEGIN
             SELECT @lGLPostingRetVal = @lUpdAcctHistRefRetVal
             GOTO FinishProc
-            END
+         END
 
-         END /* End @lAcctRefUsage = 1 OR @lAcctRefUsage = 2 */
+      END /* End @lAcctRefUsage = 1 OR @lAcctRefUsage = 2 */
 
-      END /* End @lRowCount > 0 [We DO have some non-beginning balance rows in tglPosting.] */
+   END /* End @lRowCount > 0 [We DO have some non-beginning balance rows in tglPosting.] */
 
 /* Determine how many beginning balance rows in tglPosting will get updated in history. */
    SELECT @lRowCount = COUNT(1)
-      FROM tglPosting WITH (NOLOCK)
-      WHERE BatchKey = @iBatchKey
+   FROM tglPosting WITH (NOLOCK)
+   WHERE BatchKey = @iBatchKey
       AND NatCurrBegBal <> 0
    
    IF @@ERROR <> 0 
-      BEGIN
+   BEGIN
       SELECT @lGLPostingRetVal = 0
       GOTO FinishProc
-      END
+   END
 
 /* Do we have any beginning balance rows in tglPosting for this batch? */
    IF @lRowCount > 0
-      BEGIN
+   BEGIN
 
 /* Insert the rows from tglPosting into #tglTransaction, then into tglTransaction, for BB transactions. */
       EXECUTE spglSetAPIInsertGLTransBB @iBatchKey,
@@ -456,16 +455,16 @@ AS
 
 /* Did any beginning balance GL entries get inserted into tglTransaction? */
       IF @lInsertGLTransBBRetVal = 0
-         BEGIN
+      BEGIN
          SELECT @oRetVal = 0
          RETURN
-         END
+      END
 
       IF @lInsertGLTransBBRetVal <> 1
-         BEGIN
+      BEGIN
          SELECT @lGLPostingRetVal = @lInsertGLTransBBRetVal
          GOTO FinishProc
-         END
+      END
 
 /* Update beginning balance amounts in tglAcctHist. */
       EXECUTE spglSetAPIUpdAcctHistBB @iCompanyID,
@@ -474,16 +473,16 @@ AS
                                       @lUpdAcctHistBBRetVal OUTPUT
 
       IF @lUpdAcctHistBBRetVal = 0
-         BEGIN
+      BEGIN
          SELECT @oRetVal = 0
          RETURN
-         END
+      END
 
       IF @lUpdAcctHistBBRetVal <> 1
-         BEGIN
+      BEGIN
          SELECT @lGLPostingRetVal = @lUpdAcctHistBBRetVal
          GOTO FinishProc
-         END
+      END
 
 /* Update beginning balances in future years in tglAcctHist. */
       EXECUTE spglSetAPIUpdFutBegBalBB @iCompanyID,
@@ -494,20 +493,20 @@ AS
                                        @lUpdFutBegBalBBRetVal OUTPUT
 
       IF @lUpdFutBegBalBBRetVal = 0
-         BEGIN
+      BEGIN
          SELECT @oRetVal = 0
          RETURN
-         END
+      END
 
       IF @lUpdFutBegBalBBRetVal <> 1
-         BEGIN
+      BEGIN
          SELECT @lGLPostingRetVal = @lUpdFutBegBalBBRetVal
          GOTO FinishProc
-         END
+      END
 
 /* Determine Multicurrency Use */
       IF @lUseMultCurr = 1
-         BEGIN
+      BEGIN
 
 /* Update beginning balance amounts in tglAcctHistCurr. */
          EXECUTE spglSetAPIUpdAcctHistCurrBB @iCompanyID,
@@ -516,16 +515,16 @@ AS
                                              @lUpdAcctHistCurrBBRetVal OUTPUT
 
          IF @lUpdAcctHistCurrBBRetVal = 0
-            BEGIN
+         BEGIN
             SELECT @oRetVal = 0
             RETURN
-            END
+         END
 
          IF @lUpdAcctHistCurrBBRetVal <> 1
-            BEGIN
+         BEGIN
             SELECT @lGLPostingRetVal = @lUpdAcctHistCurrBBRetVal
             GOTO FinishProc
-            END
+         END
 
 /* Update beginning balances in future years in tglAcctHistCurr. */
          EXECUTE spglSetAPIUpdFutBegBalCurrBB @iCompanyID,
@@ -535,20 +534,20 @@ AS
                                               @lUpdFutBegBalCurrBBRetVal OUTPUT
 
          IF @lUpdFutBegBalCurrBBRetVal = 0
-            BEGIN
+         BEGIN
             SELECT @oRetVal = 0
             RETURN
-            END
+         END
 
          IF @lUpdFutBegBalCurrBBRetVal <> 1
-            BEGIN
+         BEGIN
             SELECT @lGLPostingRetVal = @lUpdFutBegBalCurrBBRetVal
             GOTO FinishProc
-            END
+         END
 
-         END /* End @lUseMultCurr = 1 [This Company DOES use Multicurrency.] */
+      END /* End @lUseMultCurr = 1 [This Company DOES use Multicurrency.] */
 
-      END /* End @lRowCount > 0 [Beginning balance rows exist in tglPosting for this batch.] */
+   END /* End @lRowCount > 0 [Beginning balance rows exist in tglPosting for this batch.] */
 
 /* Complete ********************************************* */
 FinishProc:

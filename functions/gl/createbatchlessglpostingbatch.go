@@ -28,7 +28,11 @@ import (
 //
 //    0 - Unexpected Error (SP Failure)
 //    1 - Successful
-func CreateBatchlessGLPostingBatch(bq *du.BatchQuery, loginID string, iBatchCmnt string) constants.ResultConstant {
+func CreateBatchlessGLPostingBatch(
+	bq *du.BatchQuery,
+	iUserID string,
+	iBatchCmnt string) constants.ResultConstant {
+
 	bq.ScopeName("CreateBatchlessGLPostingBatch")
 
 	qr := bq.Get(`SELECT DISTINCT 
@@ -52,7 +56,7 @@ func CreateBatchlessGLPostingBatch(bq *du.BatchQuery, loginID string, iBatchCmnt
 			pdt := v.ValueTime("PostDate")
 			idt := v.ValueTime("InvcDate")
 
-			res, batchKey, _ := bat.GetNextBatch(bq, cid, mod, bt, loginID, iBatchCmnt, pdt, 0, &idt)
+			res, batchKey, _ := bat.GetNextBatch(bq, cid, mod, bt, iUserID, iBatchCmnt, pdt, 0, &idt)
 
 			bq.Set(`UPDATE tmp
 					SET tmp.GLBatchKey=?

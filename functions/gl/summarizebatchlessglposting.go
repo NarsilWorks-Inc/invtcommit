@@ -33,7 +33,11 @@ import (
 //
 //     0 - Unexpected Error (SP Failure)
 //     1 - Successful
-func SummarizeBatchlessTglPosting(bq *du.BatchQuery, iCompanyID string, iBatchKey int, optUseTempTable bool) constants.ResultConstant {
+func SummarizeBatchlessTglPosting(
+	bq *du.BatchQuery,
+	iCompanyID string,
+	iBatchKey int,
+	optUseTempTable bool) constants.ResultConstant {
 
 	var qr du.QueryResult
 

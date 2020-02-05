@@ -44,7 +44,7 @@ AS
 -- were being created and later removed/re-inserted due to this problem.
 -- ************************************************************************
 
-   BEGIN
+BEGIN
 
 /* Variable Declarations *************************** */
    DECLARE @lCheckNextYearDate      DATETIME
@@ -80,7 +80,7 @@ AS
    DECLARE @lSessionID              INT
    DECLARE @lUserID		            VARCHAR(30)
 
-/* Initialization *************************** */
+   /* Initialization *************************** */
    SELECT @lDeclaredFiscPerCursor = 0,
           @lPriorYearCreation = 0,
           @oRetVal = 0,
@@ -91,290 +91,278 @@ AS
 
 /* Save the entered fiscal year, if applicable. */
    IF (COALESCE(DATALENGTH(LTRIM(RTRIM(@oFiscalYear))),0) <> 0)
-      BEGIN
-        SELECT @lEnteredFiscalYear = @oFiscalYear
-      END
+   BEGIN
+      SELECT @lEnteredFiscalYear = @oFiscalYear
+   END
    ELSE
-      BEGIN
-        SELECT @lEnteredFiscalYear = ''
-      END
+   BEGIN
+      SELECT @lEnteredFiscalYear = ''
+   END
 
-/* Begin Transaction */
+   /* Begin Transaction */
    IF (@iCreateFlag = 1)
       BEGIN TRANSACTION
 
 /* Main Loop ********************************* */
 MainLoop:
    WHILE (1 = 1)
-      BEGIN
+   BEGIN
 
-/* Initialization */
+      /* Initialization */
       SELECT @lPriorYearCreation = 0,
-             @lFirstTime = 0,
-             @oFiscalYear = '',
-             @oFiscalPer = 0,
-             @oStartDate = '',
-             @oEndDate = ''
+         @lFirstTime = 0,
+         @oFiscalYear = '',
+         @oFiscalPer = 0,
+         @oStartDate = '',
+         @oEndDate = ''
 
-/* Get Fiscal Info based upon entered date. */
+      /* Get Fiscal Info based upon entered date. */
       SELECT @oFiscalYear = FiscYear,
-             @oFiscalPer = FiscPer,
-             @oStartDate = StartDate, 
-             @oEndDate = EndDate,
-             @oStatus = Status
-         FROM tglFiscalPeriod WITH (NOLOCK)
-         WHERE CompanyID = @iCompanyID 
+         @oFiscalPer = FiscPer,
+         @oStartDate = StartDate, 
+         @oEndDate = EndDate,
+         @oStatus = Status
+      FROM tglFiscalPeriod WITH (NOLOCK)
+      WHERE CompanyID = @iCompanyID 
          AND @iDate BETWEEN StartDate AND EndDate
 
-/* Evaluate Query. */
+      /* Evaluate Query. */
       IF (@@ROWCOUNT = 0)
-         BEGIN
+      BEGIN
 
-/* Fiscal Record not found */
-/* Get the latest Fiscal Year. */
+         /* Fiscal Record not found */
+         /* Get the latest Fiscal Year. */
          SELECT @lCurrentFiscalYear = MAX(FiscYear)
-            FROM tglFiscalYear WITH (NOLOCK)
-            WHERE CompanyID = @iCompanyID
+         FROM tglFiscalYear WITH (NOLOCK)
+         WHERE CompanyID = @iCompanyID
 
-/* Get the First Fiscal Year. */
+         /* Get the First Fiscal Year. */
          SELECT @lFirstFiscalYear = MIN(FiscYear)
-            FROM tglFiscalPeriod WITH (NOLOCK)
-            WHERE CompanyID = @iCompanyID
+         FROM tglFiscalPeriod WITH (NOLOCK)
+         WHERE CompanyID = @iCompanyID
 
-/* Get Start Date of First Fiscal Year. */
+         /* Get Start Date of First Fiscal Year. */
          SELECT @lFirstStartDate = StartDate
-            FROM tglFiscalPeriod WITH (NOLOCK)
-            WHERE CompanyID = @iCompanyID
+         FROM tglFiscalPeriod WITH (NOLOCK)
+         WHERE CompanyID = @iCompanyID
             AND FiscYear = @lFirstFiscalYear
             AND FiscPer = (SELECT MIN(FiscPer)
-                              FROM tglFiscalPeriod WITH (NOLOCK)
-                              WHERE CompanyID = @iCompanyID 
-                              AND FiscYear = @lFirstFiscalYear)
+                           FROM tglFiscalPeriod WITH (NOLOCK)
+                           WHERE CompanyID = @iCompanyID 
+                           AND FiscYear = @lFirstFiscalYear)
 
          IF (@iDate <= @lFirstStartDate)
-            BEGIN
-/* Entered Date <= Start Date of First Fiscal Year */
+         BEGIN
+            /* Entered Date <= Start Date of First Fiscal Year */
             SELECT @lCurrentFiscalYear = @lFirstFiscalYear
             SELECT @lPriorYearCreation = 1
-            END /* End @iDate <= @lFirstStartDate */
-           
-/* Get No. of Periods for Oldest Fiscal Year. */
+         END /* End @iDate <= @lFirstStartDate */
+            
+         /* Get No. of Periods for Oldest Fiscal Year. */
          SELECT @lPeriods = NoOfPeriods
-            FROM tglFiscalYear WITH (NOLOCK)
-            WHERE CompanyID = @iCompanyID
+         FROM tglFiscalYear WITH (NOLOCK)
+         WHERE CompanyID = @iCompanyID
             AND FiscYear = @lCurrentFiscalYear
 
-/* Get Start and End Dates of Oldest Fiscal Year Period 1. */
+         /* Get Start and End Dates of Oldest Fiscal Year Period 1. */
          SELECT @lStartYearDate = StartDate,
-                @lDate = EndDate 
-            FROM tglFiscalPeriod WITH (NOLOCK)
-            WHERE CompanyID = @iCompanyID
+               @lDate = EndDate 
+         FROM tglFiscalPeriod WITH (NOLOCK)
+         WHERE CompanyID = @iCompanyID
             AND FiscYear = @lCurrentFiscalYear
             AND FiscPer = (SELECT MIN(FiscPer)
-                              FROM tglFiscalPeriod WITH (NOLOCK)
-                              WHERE CompanyID = @iCompanyID 
-                              AND FiscYear = @lCurrentFiscalYear)
+                           FROM tglFiscalPeriod WITH (NOLOCK)
+                           WHERE CompanyID = @iCompanyID 
+                           AND FiscYear = @lCurrentFiscalYear)
 
-/* Get End Date of Oldest Fiscal Year. */
+         /* Get End Date of Oldest Fiscal Year. */
          SELECT @lEndYearDate = EndDate
-            FROM tglFiscalPeriod WITH (NOLOCK)
-            WHERE CompanyID = @iCompanyID
+         FROM tglFiscalPeriod WITH (NOLOCK)
+         WHERE CompanyID = @iCompanyID
             AND FiscYear = @lCurrentFiscalYear
             AND FiscPer = (SELECT MAX(FiscPer)
-                              FROM tglFiscalPeriod WITH (NOLOCK)
-                              WHERE CompanyID = @iCompanyID 
-                              AND FiscYear = @lCurrentFiscalYear)
+                           FROM tglFiscalPeriod WITH (NOLOCK)
+                           WHERE CompanyID = @iCompanyID 
+                           AND FiscYear = @lCurrentFiscalYear)
 
          IF (@lPriorYearCreation = 0)
-            BEGIN
+         BEGIN
 
             SELECT @lCheckNextYearDate = DATEADD(YEAR,1,@lDate)
 
             IF (@lCheckNextYearDate > @lEndYearDate)
-               BEGIN
+            BEGIN
                SELECT @lMethod = 1 -- 1 - Normal Increment (Across Months)
-               END
+            END
             ELSE  
-               BEGIN
+            BEGIN
                SELECT @lMethod = 2 -- 2 - Using the Days Diff of each period
-               END
+            END
 
             IF (COALESCE(DATALENGTH(LTRIM(RTRIM(@lEnteredFiscalYear))),0) <> 0)
-               BEGIN
-               SELECT @lYear = @lEnteredFiscalYear
-               END
-            ELSE
-               BEGIN
-               SELECT @lYear = CONVERT(VARCHAR(5),CONVERT(INT,SUBSTRING(@lCurrentFiscalYear,1,4)) + 1)
-               END
-            END /* End @lPriorYearCreation = 0 */
-         ELSE
-/* @lPriorYearCreation <> 0 */
             BEGIN
+               SELECT @lYear = @lEnteredFiscalYear
+            END
+            ELSE
+            BEGIN
+               SELECT @lYear = CONVERT(VARCHAR(5),CONVERT(INT,SUBSTRING(@lCurrentFiscalYear,1,4)) + 1)
+            END
+
+         END /* End @lPriorYearCreation = 0 */
+         ELSE         
+         BEGIN /* @lPriorYearCreation <> 0 */
 
             SELECT @lMethod = 2 
 
             IF (COALESCE(DATALENGTH(LTRIM(RTRIM(@lEnteredFiscalYear))),0) <> 0)
-               BEGIN
-               SELECT @lYear = @lEnteredFiscalYear
-               END
-            ELSE
-               BEGIN
-               SELECT @lYear = CONVERT(VARCHAR(5),CONVERT(INT,SUBSTRING(@lCurrentFiscalYear,1,4)) - 1)
-               END
-  
-               SELECT @lNoOfDaysinFiscYear = DATEDIFF(day, @lStartYearDate, @lEndYearDate) 
-
-            END /* End @lPriorYearCreation <> 0 */
-
-         SELECT @lFirstTime = 1
-         
-         IF (COALESCE(DATALENGTH(LTRIM(RTRIM(@lEnteredFiscalYear))),0) = 0)
             BEGIN
-            SELECT @lYear = SUBSTRING(@lYear,1,4) + ' '
+               SELECT @lYear = @lEnteredFiscalYear
+            END
+            ELSE
+            BEGIN
+               SELECT @lYear = CONVERT(VARCHAR(5),CONVERT(INT,SUBSTRING(@lCurrentFiscalYear,1,4)) - 1)
             END
 
+            SELECT @lNoOfDaysinFiscYear = DATEDIFF(day, @lStartYearDate, @lEndYearDate) 
+
+         END /* End @lPriorYearCreation <> 0 */
+
+         SELECT @lFirstTime = 1
+            
+         IF (COALESCE(DATALENGTH(LTRIM(RTRIM(@lEnteredFiscalYear))),0) = 0)
+         BEGIN
+            SELECT @lYear = SUBSTRING(@lYear,1,4) + ' '
+         END
+
          SELECT @lOnceCreated = 0,
-                @lFirstPerRecord = 0,
-                @lLastPerEndDate = @lEndYearDate,
-                @lTime = getdate()
+            @lFirstPerRecord = 0,
+            @lLastPerEndDate = @lEndYearDate,
+            @lTime = getdate()
 
          IF @lDeclaredFiscPerCursor = 0
-            BEGIN
+         BEGIN
 
-/* Declare Fiscal Period Cursor. */
+            /* Declare Fiscal Period Cursor. */
             DECLARE FiscPerCursor INSENSITIVE CURSOR FOR
-               SELECT FiscPer, StartDate, EndDate, 
-                      DATEDIFF(day,StartDate,EndDate) NoOfDays
-                  FROM tglFiscalPeriod WITH (NOLOCK)
-                  WHERE CompanyID = @iCompanyID
-                  AND FiscYear = @lCurrentFiscalYear
-                  ORDER BY CompanyID, FiscYear, FiscPer
+            SELECT FiscPer, StartDate, EndDate, 
+                  DATEDIFF(day,StartDate,EndDate) NoOfDays
+            FROM tglFiscalPeriod WITH (NOLOCK)
+            WHERE CompanyID = @iCompanyID
+               AND FiscYear = @lCurrentFiscalYear
+            ORDER BY CompanyID, FiscYear, FiscPer
 
             SELECT @lDeclaredFiscPerCursor = 1
 
-            END /* End @lDeclaredFiscPerCursor = 0 */
+         END /* End @lDeclaredFiscPerCursor = 0 */
 
          OPEN FiscPerCursor
 
          FETCH NEXT FROM FiscPerCursor INTO @lFiscPer, @lStartDate, @lEndDate, @lNoOfDays
 
-FetchLoop:
+--FetchLoop:
          WHILE (@@FETCH_STATUS <> -1)
-            BEGIN
-
+         BEGIN
             IF (@@FETCH_STATUS <> -2)
-               BEGIN
-
+            BEGIN
                IF (@lFirstTime = 1)
-                  BEGIN
-
+               BEGIN
                   IF (@lMethod = 2)
-                     BEGIN
-
-                     SELECT @lNoOfDays = DATEDIFF(day,@lStartDate,@lEndDate)
-
-                     IF (@lPriorYearCreation = 0)
-                        BEGIN
-                        SELECT @lStartDate = @lEndYearDate
-                        END
-                     ELSE
-                        BEGIN
-                        SELECT @lStartDate = DATEADD(DAY, -(@lNoOfDaysinFiscYear+2), @lStartDate)
-                        END
-
-                     END /* End @lMethod = 2 */
-                  ELSE
-/* @lMethod <> 2 */
-                     BEGIN
-                     SELECT @lStartDate = @lEndYearDate
-                     END /* End @lMethod <> 2 */
-
-                     SELECT @lFirstTime = 0
-                  END /* End @lFirstTime = 1 */
-               ELSE
-/* @lFirstTime <> 1 */
                   BEGIN
-                  SELECT @lStartDate = @lNextEndDate
-                  END /* End @lFirstTime <> 1 */
+                     SELECT @lNoOfDays = DATEDIFF(day,@lStartDate,@lEndDate)
+                     IF (@lPriorYearCreation = 0)
+                     BEGIN
+                        SELECT @lStartDate = @lEndYearDate
+                     END
+                     ELSE
+                     BEGIN
+                        SELECT @lStartDate = DATEADD(DAY, -(@lNoOfDaysinFiscYear+2), @lStartDate)
+                     END
+                  END /* End @lMethod = 2 */
+                  ELSE                  
+                  BEGIN /* @lMethod <> 2 */
+                     SELECT @lStartDate = @lEndYearDate
+                  END /* End @lMethod <> 2 */
 
-               EXECUTE spglGetNextYearPeriod @lStartDate, @lFiscPer,
-		   					                 @lNoOfDays, @lEndDate, 
-							                 @lEndYearDate, @lStartYearDate, @lMethod, 
-							                 @lNextStartDate OUTPUT,
-							                 @lNextEndDate OUTPUT
+                  SELECT @lFirstTime = 0
+               END /* End @lFirstTime = 1 */
+               ELSE                  
+               BEGIN /* @lFirstTime <> 1 */
+                  SELECT @lStartDate = @lNextEndDate
+               END /* End @lFirstTime <> 1 */
+
+               EXECUTE spglGetNextYearPeriod 
+                     @lStartDate, @lFiscPer,
+		   				@lNoOfDays, @lEndDate, 
+							@lEndYearDate, @lStartYearDate, @lMethod, 
+							@lNextStartDate OUTPUT,
+							@lNextEndDate OUTPUT
 
                SELECT @lLastPerEndDate = @lNextEndDate
 
-               IF (@lPriorYearCreation = 1
-               AND @lFiscPer = @lPeriods)
-                  BEGIN
+               IF (@lPriorYearCreation = 1 AND @lFiscPer = @lPeriods)
+               BEGIN
                   SELECT @lNextEndDate = DATEADD(DAY, -1, @lStartYearDate)
-                  END
+               END
 
                IF (@iCreateFlag IN (1,3))
+               BEGIN
+                  /* Create the New Records. */
+                  IF (@lOnceCreated = 0)
                   BEGIN
 
-/* Create the New Records. */
-                  IF (@lOnceCreated = 0)
-                     BEGIN
-
                      INSERT INTO tglFiscalYear (CompanyID,
-		 				   	                    FiscYear,
-								                NoOfPeriods)
-                        VALUES (@iCompanyID,
-				                @lYear,
-					            @lPeriods)
- 
+                        FiscYear,
+                        NoOfPeriods)
+                     VALUES (@iCompanyID,
+                        @lYear,
+                     @lPeriods)
+   
                      SELECT @lOnceCreated = 1
-
-                     END /* End @lOnceCreated = 0 */
+               
+                  END /* End @lOnceCreated = 0 */
     
                   IF (@lFirstPerRecord = 0)
-                     BEGIN
-
+                  BEGIN
                      SELECT @lFirstPerRecord = 1
 
                      EXECUTE spglInsertFiscalYearPer @iCompanyID, @lYear,
-							  	                     @lFiscPer, @lNextStartDate,
-								                     @lNextEndDate, 1 
+                                       @lFiscPer, @lNextStartDate,
+                                       @lNextEndDate, 1 
 
-                     END /* End @lFirstPerRecord = 0 */
-                  ELSE
-/* @lFirstPerPeriod <> 0 */
-                     BEGIN
+                  END /* End @lFirstPerRecord = 0 */
+                  ELSE               
+                  BEGIN /* @lFirstPerPeriod <> 0 */
 
                      EXECUTE spglInsertFiscalYearPer @iCompanyID, @lYear,
-								                     @lFiscPer, @lNextStartDate,
-								                     @lNextEndDate, 1 
+                                          @lFiscPer, @lNextStartDate,
+                                          @lNextEndDate, 1 
 
-                     END /* End @lFirstPerPeriod <> 0 */
-
-                  END /* End Create the New Records */
+                  END /* End @lFirstPerPeriod <> 0 */
+               END /* End Create the New Records */
                ELSE                   
+               BEGIN
+
+                  /* Create the New Temporary Records. */
+                  IF (@lOnceCreated = 0)
                   BEGIN
 
-/* Create the New Temporary Records. */
-                  IF (@lOnceCreated = 0)
-                     BEGIN
-
                      INSERT INTO tciFiscYearWrk (CompanyID,
-						                         FiscYear,
-								                 NoOfPeriods, 
-								                 DBUserID,
-								                 TimeCreated)
+                                             FiscYear,
+                                          NoOfPeriods, 
+                                          DBUserID,
+                                          TimeCreated)
                         VALUES (@iCompanyID,
-				     	        @lYear,
-					            @lPeriods,
-					            @lUserID, 
-                                @lTime)
+                           @lYear,
+                           @lPeriods,
+                           @lUserID, 
+                                 @lTime)
 
                      SELECT @lOnceCreated = 1
 
-                     END /* End @lOnceCreated = 0 */
+                  END /* End @lOnceCreated = 0 */
                        
                   IF (@lFirstPerRecord = 0)
-                     BEGIN
+                  BEGIN
 
                      SELECT @lFirstPerRecord = 1
 
@@ -382,113 +370,108 @@ FetchLoop:
 							                            @lFiscPer, @lNextStartDate, 
 									                    @lNextEndDate, 1, @lTime 
 
-                     END /* End @lFirstPerRecord = 0 */
+                  END /* End @lFirstPerRecord = 0 */
                   ELSE
-/* @lFirstPerRecord <> 0 */
-                     BEGIN
-
+                  BEGIN /* @lFirstPerRecord <> 0 */
                      EXECUTE spgltmpInsertFiscalYearPer @iCompanyID, @lYear,
-								     	                @lFiscPer, @lNextStartDate, 
-									                    @lNextEndDate, 1, @lTime 
+                                          @lFiscPer, @lNextStartDate, 
+                                          @lNextEndDate, 1, @lTime 
+                  END /* End @lFirstPerRecord <> 0 */
 
-                     END /* End @lFirstPerRecord <> 0 */
-
-                  END /* End Create the New Temporary Records */
+               END /* End Create the New Temporary Records */
 
                FETCH NEXT FROM FiscPerCursor INTO @lFiscPer, @lStartDate, @lEndDate, @lNoOfDays
 
-               END /* End Fetch Loop @@FETCH_STATUS <> -2 */
+            END /* End Fetch Loop @@FETCH_STATUS <> -2 */
 
-            END /* End Fetch Loop @@FETCH_STATUS <> -1 */
+         END /* End Fetch Loop @@FETCH_STATUS <> -1 */
 
          CLOSE FiscPerCursor
 
-         END /* End Fiscal Record Not Found */
+      END /* End Fiscal Record Not Found */
       ELSE 
-         BEGIN
+      BEGIN
 
-/* Fiscal Record Found */
+         /* Fiscal Record Found */
          SELECT @oRetVal = 1
 
-/* Determine if Retained Earning Acct(s) exist only if creating fiscal year info. */
+         /* Determine if Retained Earning Acct(s) exist only if creating fiscal year info. */
          IF (@iCreateFlag IN (1,3))
-            BEGIN
+         BEGIN
  
-/* Get Retained Earning Acct from tglOptions. */
+            /* Get Retained Earning Acct from tglOptions. */
             SELECT @lRetainedEarnAcct = RetainedEarnAcct
-               FROM tglOptions WITH (NOLOCK)
-               WHERE CompanyID = @iCompanyID
+            FROM tglOptions WITH (NOLOCK)
+            WHERE CompanyID = @iCompanyID
 
-/* Will any Retained Earning Acct(s) need to be created? */
+            /* Will any Retained Earning Acct(s) need to be created? */
             EXECUTE spglRetEarnAcctCreate @iCompanyID,
-                                          0,
-                                          @lSessionID OUTPUT,
-                                          0,
-                                          @lRetainedEarnAcct,
-                                          @lRetVal OUTPUT
+                                             0,
+                                             @lSessionID OUTPUT,
+                                             0,
+                                             @lRetainedEarnAcct,
+                                             @lRetVal OUTPUT
 
-/* Evaluate Return: 0 = Not Masked: Needs Creation,
-                    1 = Masked: Needs Creation */
+            /* Evaluate Return: 0 = Not Masked: Needs Creation,
+            1 = Masked: Needs Creation */
             IF (@lRetVal IN (0,1))
-               BEGIN
+            BEGIN
 
                SELECT @oRetVal = 5
 
-/* Delete records in work table. */
+               /* Delete records in work table. */
                DELETE FROM tglRetEarnAcctWrk
-                  WHERE SessionID = @lSessionID
-                  AND CompanyID = @iCompanyID
+               WHERE SessionID = @lSessionID
+               AND CompanyID = @iCompanyID
 
-               END /* End @lRetVal IN (0,1) */
+            END /* End @lRetVal IN (0,1) */
 
-            END /* End @iCreateFlag IN (1,3) */
+         END /* End @iCreateFlag IN (1,3) */
 
-/* Break Main Loop */
+         /* Break Main Loop */
          BREAK
 
-         END /* End Fiscal Record Found */        
+      END /* End Fiscal Record Found */        
 
-/* Only attempt to get the fiscal information if we had to calculate/create fiscal information. */
+      /* Only attempt to get the fiscal information if we had to calculate/create fiscal information. */
       IF (@iCreateFlag IN (1,3))
-         BEGIN
+      BEGIN
 
-/* New Records should have been written. */
+         /* New Records should have been written. */
          SELECT @oRetVal = 2,
-                @oFiscalYear = '',
-                @oFiscalPer = 0,
-                @oStartDate = '',
-                @oEndDate = '',
-                @oStatus = 0
+                  @oFiscalYear = '',
+                  @oFiscalPer = 0,
+                  @oStartDate = '',
+                  @oEndDate = '',
+                  @oStatus = 0
 
          SELECT @oFiscalYear = FiscYear,
-                @oFiscalPer = FiscPer, 
-                @oStartDate = StartDate,
-                @oEndDate = EndDate,
-                @oStatus = Status
-            FROM tglFiscalPeriod WITH (NOLOCK)
-            WHERE CompanyID = @iCompanyID 
+            @oFiscalPer = FiscPer, 
+            @oStartDate = StartDate,
+            @oEndDate = EndDate,
+            @oStatus = Status
+         FROM tglFiscalPeriod WITH (NOLOCK)
+         WHERE CompanyID = @iCompanyID 
             AND @iDate BETWEEN StartDate AND EndDate
 
          IF (@@ROWCOUNT = 0)
-            BEGIN
-
-            IF (@lPriorYearCreation = 1)
-               BEGIN
-               SELECT @oRetVal = 6
-               END
-            ELSE
-               BEGIN
-               SELECT @oRetVal = 7
-               END
-
-            END /* End @@ROWCOUNT = 0 */
-
-         END /* End @iCreateFlag IN (1,3) */
-      ELSE
-/* @iCreateFlag NOT IN (1,3) */
          BEGIN
 
-/* New Records not created, calculated only. */  
+            IF (@lPriorYearCreation = 1)
+            BEGIN
+               SELECT @oRetVal = 6
+            END
+            ELSE
+            BEGIN
+               SELECT @oRetVal = 7
+            END
+         END /* End @@ROWCOUNT = 0 */
+
+      END /* End @iCreateFlag IN (1,3) */
+      ELSE      
+      BEGIN /* @iCreateFlag NOT IN (1,3) */
+
+         /* New Records not created, calculated only. */  
          SELECT @oRetVal = 3,
                 @oFiscalYear = '',
                 @oFiscalPer = 0,
@@ -501,73 +484,71 @@ FetchLoop:
                 @oStartDate = StartDate,
                 @oEndDate = EndDate,
                 @oStatus = Status
-            FROM tciFiscPeriodWrk WITH (NOLOCK)
-            WHERE CompanyID = @iCompanyID 
+         FROM tciFiscPeriodWrk WITH (NOLOCK)
+         WHERE CompanyID = @iCompanyID 
             AND @iDate BETWEEN StartDate AND EndDate
 
          IF (@@ROWCOUNT = 0)
-            BEGIN
-
-            IF (@lPriorYearCreation = 1)
-               BEGIN
-               SELECT @oRetVal = 6
-               END
-            ELSE
-               BEGIN
-               SELECT @oRetVal = 7
-               END
-
-            END /* End @@ROWCOUNT = 0 */
-
-         END /* End @iCreateFlag NOT IN (1,3) */
-
-/* Calculate/Re-Calculate Beginning Balances. */
-      IF (@iCreateFlag IN (1,3)
-      AND @oRetVal = 2)
          BEGIN
 
+            IF (@lPriorYearCreation = 1)
+            BEGIN
+               SELECT @oRetVal = 6
+            END
+            ELSE
+            BEGIN
+               SELECT @oRetVal = 7
+            END
+
+         END /* End @@ROWCOUNT = 0 */
+
+      END /* End @iCreateFlag NOT IN (1,3) */
+
+      /* Calculate/Re-Calculate Beginning Balances. */
+      IF (@iCreateFlag IN (1,3) AND @oRetVal = 2)
+      BEGIN
          EXECUTE spglCalcBeginBalance @iCompanyID, @oFiscalYear, 0, @lRetVal OUTPUT
 
          IF (@lRetVal = 1)
-            BEGIN
-/* Retained Earning Acct(s) not found. */
+         BEGIN
+            /* Retained Earning Acct(s) not found. */
             SELECT @oRetVal = 5
-            END /* End @lRetVal = 1 */
+         END /* End @lRetVal = 1 */
 
-         END /* End @iCreateFlag IN (1,3) AND @oRetVal = 2 */
+      END /* End @iCreateFlag IN (1,3) AND @oRetVal = 2 */
 
-/* Clean up tciFiscYearWrk Table. */
+      /* Clean up tciFiscYearWrk Table. */
       DELETE FROM tciFiscYearWrk  
          WHERE DBUserID = @lUserID
          AND TimeCreated = @lTime
 
-/* Clean up tciFiscPeriodWrk. */
+      /* Clean up tciFiscPeriodWrk. */
       DELETE FROM tciFiscPeriodWrk
          WHERE DBUserID = @lUserID
          AND TimeCreated = @lTime
 
-/* Break from the Main Loop. */
+      /* Break from the Main Loop. */
       BREAK
    
-      END /* End of the Main Loop */
+   END /* End of the Main Loop */
 
    IF (@lDeclaredFiscPerCursor = 1)
-      BEGIN
+   BEGIN
       DEALLOCATE FiscPerCursor
-      END
+   END
 
    IF (@iCreateFlag = 1) -- Create Periods and AutoCommit by Procedure.
-      BEGIN
+   BEGIN
 
       IF @oRetVal IN (1,2,3) 
-         BEGIN
+      BEGIN
          COMMIT TRANSACTION 
-         END
+      END
       ELSE
-         BEGIN
+      BEGIN
          ROLLBACK TRANSACTION 
-         END
+      END
 
-      END /* End @iCreateFlag = 1 */
+   END /* End @iCreateFlag = 1 */
 
-   END /* End of the Stored Procedure */
+END /* End of the Stored Procedure */

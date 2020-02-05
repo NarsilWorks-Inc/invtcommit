@@ -8,9 +8,9 @@ import (
 func GetNextSurrogateKey(bq *du.BatchQuery, tableName string) int {
 	bq.ScopeName("GetNextSurrogateKey")
 
-	qr := bq.Get(`SELECT NextKey tciSurrogateKey WHERE TableName=?;`, tableName)
+	qr := bq.Get(`SELECT NextKey FROM tciSurrogateKey WHERE TableName=?;`, tableName)
 	if qr.HasData {
-		bq.Set(`UPDATE tciSurrogateKey NextKey = NextKey + 1 WHERE TableName=?;`)
+		bq.Set(`UPDATE tciSurrogateKey SET NextKey = NextKey + 1 WHERE TableName=?;`, tableName)
 		return int(qr.Get(0).ValueInt64Ord(0))
 	}
 

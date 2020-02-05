@@ -10,10 +10,12 @@ Release:
 package main
 
 import (
+	"gosqljobs/invtcommit/functions/sm"
 	"log"
 	"os"
 	"strings"
 
+	_ "github.com/denisenkom/go-mssqldb"
 	cfg "github.com/eaglebush/config"
 	du "github.com/eaglebush/datautils"
 )
@@ -50,5 +52,20 @@ func main() {
 	}
 
 	bq := du.NewBatchQuery(config)
-	log.Println(bq)
+	//og.Println(bq)
+
+	connected := bq.Connect("DEST_MDCI")
+	defer bq.Disconnect()
+
+	if !connected {
+		log.Println(bq.LastErrorText())
+	}
+
+	if connected {
+		// test get next block surrogate key
+		stk, ek := sm.GetNextBlockSurrogateKey(bq, `TestTable`, 10)
+		log.Printf("Start Key: %d, End Key: %d\r\n", stk, ek)
+		log.Println(bq.LastErrorText())
+	}
+
 }

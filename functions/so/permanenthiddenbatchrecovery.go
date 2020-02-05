@@ -56,7 +56,7 @@ func PermanentHiddenBatchRecovery(
 	}
 
 	// Populate #timPosting as spimPostAPIUndoCostTiersUpdate references this table.
-	qr = bq.Set(`INSERT #timposting
+	qr = bq.Set(`INSERT INTO #timposting
 					(batchkey,
 					tranqty,
 					invttrankey,
@@ -85,7 +85,7 @@ func PermanentHiddenBatchRecovery(
 		return constants.ResultError
 	}
 
-	qr = bq.Set(`INSERT #timposting
+	qr = bq.Set(`INSERT INTO #timposting
 					(batchkey,
 					tranqty,
 					invttrankey,
